@@ -2,8 +2,8 @@
 /*
 Plugin Name: WP Over Network
 Plugin URI: http://
-Description: Utility for network site on WordPress
-Author: @HissyNC、@yuka2py
+Description: Utilities for network site on WordPress
+Author: @HissyNC, @yuka2py
 Author URI: http://
 Version: 0.0.1
 */
@@ -14,7 +14,7 @@ add_action('init', 'wp_over_network::init');
 
 class wp_over_network
 {
-	const WPON_PREFIX = 'wp_over_network_';
+	const WPONW = 'wponw_';
 
 
 	/**
@@ -22,8 +22,26 @@ class wp_over_network
 	 * @return  void
 	 */
 	static public function init() {
-		add_shortcode('get_posts_over_network', 'wp_over_network::get_posts');
-		add_shortcode('get_network_blogs', 'wp_over_network::get_blogs');
+		add_shortcode('the_posts_over_network', 'wp_over_network::the_posts');
+	}
+
+	/**
+	 * ショートコード的に使えるように考えようと思いましたが、
+	 * どうもしっくり来ないので、また打ち合わせさせてください。> @HissyNC
+	 */
+	static public function the_posts( $atts ) {
+		$atts = shortcode_atts( array(
+			'template' => null,
+		), $atts );
+		extract( $atts );
+
+		if ( empty( $template ) ) {
+			throw new ErrorException('Must specify template.');
+		}
+
+		$posts = self::get_post( $atts );
+
+		require $template;
 	}
 
 	/**
@@ -216,7 +234,7 @@ class wp_over_network
 	 */
 	static protected function _set_transient( $transient, $value, $expiration = 3600 ) {
 		$transient = sha1( $transient );
-		return set_site_transient(self::WPON_PREFIX . $transient, $value, $expiration );
+		return set_site_transient(self::WPONW . $transient, $value, $expiration );
 	}
 
 	/**
@@ -228,7 +246,7 @@ class wp_over_network
 	 */
 	static protected function _get_transient( $transient ) {
 		$transient = sha1( $transient );
-		return get_site_transient( self::WPON_PREFIX . $transient );
+		return get_site_transient( self::WPONW . $transient );
 	}
 
 }
