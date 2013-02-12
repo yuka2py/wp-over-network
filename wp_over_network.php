@@ -26,7 +26,6 @@ class wp_over_network
 		add_shortcode('get_network_blogs', 'wp_over_network::get_blogs');
 	}
 
-
 	/**
 	 * Get posts over network.
 	 * @param  mixed  $args
@@ -62,45 +61,59 @@ class wp_over_network
 		) );
 		extract( $args );
 
-		//Supports paged and offset
-		if ( $offset === false ) {
-			$offset = ( $paged - 1 ) * $numberposts;
+		$posts = false;
+		if ( $transient_expiration ) {
+			$transientkey = 'get_posts' . serialize( $args );
+			$posts = self::_get_transient( $transientkey );
 		}
 
-		//Get blog information
-		$blogs = self::get_blogs( compact( 'blog_ids', 'exclude_blog_ids' ) );
+		if ( $posts === false )
+		{
+			//Supports paged and offset
+			if ( $offset === false ) {
+				$offset = ( $paged - 1 ) * $numberposts;
+			}
 
-		//Prepare subqueries for get posts from network blogs.
-		$sub_queries = array();
-		foreach ( $blogs as $blog ) {
-			$blog_prefix = ( $blog->blog_id == 1 ) ? '' : $blog->blog_id . '_';
-			$sub_queries[] = implode(' ', array(
-				sprintf( 'SELECT %3$d as blog_id, %1$s%2$sposts.* FROM %1$s%2$sposts', 
-					$wpdb->prefix, $blog_prefix, $blog->blog_id ),
-				$wpdb->prepare('WHERE post_type = %s AND post_status = %s', 
-					$post_type, $post_status),
-			));
-		}
+			//Get blog information
+			$blogs = self::get_blogs( compact( 'blog_ids', 'exclude_blog_ids' ) );
 
-		//Build query
-		$query[] = 'SELECT SQL_CALC_FOUND_ROWS *';
-		$query[] = sprintf( 'FROM (%s) as posts', implode( ' UNION ALL ', $sub_queries ) );
-		$query[] = sprintf( 'ORDER BY %s %s', $orderby, $order );
-		$query[] = sprintf( 'LIMIT %d, %d', $offset, $numberposts );
-		$query = implode( ' ', $query );
+			//Prepare subqueries for get posts from network blogs.
+			$sub_queries = array();
+			foreach ( $blogs as $blog ) {
+				$blog_prefix = ( $blog->blog_id == 1 ) ? '' : $blog->blog_id . '_';
+				$sub_queries[] = implode(' ', array(
+					sprintf( 'SELECT %3$d as blog_id, %1$s%2$sposts.* FROM %1$s%2$sposts', 
+						$wpdb->prefix, $blog_prefix, $blog->blog_id ),
+					$wpdb->prepare('WHERE post_type = %s AND post_status = %s', 
+						$post_type, $post_status),
+				));
+			}
 
-		//Execute query
-		global $wpdb;
-		$posts = $wpdb->get_results( $query );
-		$foundRows = $wpdb->get_results( 'SELECT FOUND_ROWS() as count' );
-		$foundRows = $foundRows[0]->count;
+			//Build query
+			$query[] = 'SELECT SQL_CALC_FOUND_ROWS *';
+			$query[] = sprintf( 'FROM (%s) as posts', implode( ' UNION ALL ', $sub_queries ) );
+			$query[] = sprintf( 'ORDER BY %s %s', $orderby, $order );
+			$query[] = sprintf( 'LIMIT %d, %d', $offset, $numberposts );
+			$query = implode( ' ', $query );
 
-		//Affects wp_query
-		if ( $affect_wp_query ) {
-			global $wp_query;
-			$wp_query->query_vars['posts_per_page'] = $numberposts;
-			$wp_query->found_posts = $foundRows;
-			$wp_query->max_num_pages = ceil( $foundRows / $numberposts );
+			//Execute query
+			global $wpdb;
+			$posts = $wpdb->get_results( $query );
+			$foundRows = $wpdb->get_results( 'SELECT FOUND_ROWS() as count' );
+			$foundRows = $foundRows[0]->count;
+
+			//Affects wp_query
+			if ( $affect_wp_query ) {
+				global $wp_query;
+				$wp_query->query_vars['posts_per_page'] = $numberposts;
+				$wp_query->found_posts = $foundRows;
+				$wp_query->max_num_pages = ceil( $foundRows / $numberposts );
+			}
+
+			//Save to transient
+			if ( $transient_expiration ) {
+				self::_set_transient( $transientkey, $posts, $transient_expiration);
+			}
 		}
 
 		return $posts;
@@ -132,7 +145,8 @@ class wp_over_network
 			$blogs = self::_get_transient( $transientkey );
 		}
 
-		if ( $blogs === false ) {
+		if ( $blogs === false )
+		{
 			//If necessary, prepare the where clause
 			$where = array();
 			if ( $blog_ids ) {
@@ -169,6 +183,7 @@ class wp_over_network
 				restore_current_blog();
 			}
 
+			//Save to transient
 			if ( $transient_expiration ) {
 				self::_set_transient( $transientkey, $blogs, $transient_expiration);
 			}
