@@ -1,13 +1,21 @@
 <?php
-/**
- * WP_OVER_NETWORK
- * 
- */
+/*
+Plugin Name: WP Over Network
+Plugin URI: http://
+Description: Utility for network site on WordPress
+Author: @HissyNC、@yuka2py
+Author URI: http://
+Version: 0.0.1
+*/
+
+
 add_action('init', 'wp_over_network::init');
 
 
 class wp_over_network
 {
+	const WPON_PREFIX = 'wp_over_network_';
+
 
 	/**
 	 * Initialize this plugin.
@@ -32,6 +40,7 @@ class wp_over_network
 	 *    blog_ids    取得するブログのIDを指定。デフォルトは null で指定無し
 	 *    exclude_blog_ids    除外するブログのIDを指定。デフォルトは null で指定無し
 	 *    affect_wp_query    wp_query を書き換えるか否か。デフォルトは false で書き換えない。wp_pagenavi など wp_query を参照するページャープラグインの利用時には true とする
+	 *    transient_expiration  TransientAPI を利用する場合に指定。transient の有効期間を秒で指定する。デフォルトは false で、transient を利用しない。
 	 * @return  array<stdClass>
 	 */
 	static public function get_posts( $args=null ) {
@@ -49,18 +58,19 @@ class wp_over_network
 			'blog_ids' => null,
 			'exclude_blog_ids' => null,
 			'affect_wp_query' => false,
+			'transient_expiration' => false,
 		) );
 		extract( $args );
 
-		//ページ指定とオフセットの調整
+		//Supports paged and offset
 		if ( $offset === false ) {
 			$offset = ( $paged - 1 ) * $numberposts;
 		}
 
-		//ブログの一覧を取得
+		//Get blog information
 		$blogs = self::get_blogs( compact( 'blog_ids', 'exclude_blog_ids' ) );
 
-		//投稿データを取得するサブクエリの準備
+		//Prepare subqueries for get posts from network blogs.
 		$sub_queries = array();
 		foreach ( $blogs as $blog ) {
 			$blog_prefix = ( $blog->blog_id == 1 ) ? '' : $blog->blog_id . '_';
@@ -72,20 +82,20 @@ class wp_over_network
 			));
 		}
 
-		//クエリの組み立て
+		//Build query
 		$query[] = 'SELECT SQL_CALC_FOUND_ROWS *';
 		$query[] = sprintf( 'FROM (%s) as posts', implode( ' UNION ALL ', $sub_queries ) );
 		$query[] = sprintf( 'ORDER BY %s %s', $orderby, $order );
 		$query[] = sprintf( 'LIMIT %d, %d', $offset, $numberposts );
 		$query = implode( ' ', $query );
 
-		//問い合わせの実行
+		//Execute query
 		global $wpdb;
 		$posts = $wpdb->get_results( $query );
 		$foundRows = $wpdb->get_results( 'SELECT FOUND_ROWS() as count' );
 		$foundRows = $foundRows[0]->count;
 
-		//wp_query の書き換え
+		//Affects wp_query
 		if ( $affect_wp_query ) {
 			global $wp_query;
 			$wp_query->query_vars['posts_per_page'] = $numberposts;
@@ -102,6 +112,7 @@ class wp_over_network
 	 * @param  mixed  $args
 	 *    blog_ids  取得するブログのIDを指定。デフォルトは null で指定無し
 	 *    exclude_blog_ids  除外するブログのIDを指定。デフォルトは null で指定無し
+	 *    transient_expiration  TransientAPI を利用する場合に指定。transient の有効期間を秒で指定する。デフォルトは false で、transient を利用しない。
 	 * @return  array<stdClass>
 	 */
 	static public function get_blogs( $args=null ) {
@@ -111,43 +122,56 @@ class wp_over_network
 		$args = wp_parse_args( $args, array(
 			'blog_ids' => null,
 			'exclude_blog_ids' => null,
+			'transient_expiration' => false,
 		) );
 		extract( $args );
 
-		//必要に応じて、where 句を準備
-		$where = array();
-		if ( $blog_ids ) {
-			if ( is_array( $blog_ids ) ) {
-				$blog_ids = array_map( 'intval', (array) $blog_ids );
-				$blog_ids = implode( ',', $blog_ids );
-			}            
-			$where[] = sprintf( 'blog_id IN (%s)', $blog_ids );
+		$blogs = false;
+		if ( $transient_expiration ) {
+			$transientkey = 'get_blogs' . serialize( $args );
+			$blogs = self::_get_transient( $transientkey );
 		}
-		if ( $exclude_blog_ids ) {
-			if ( is_array( $exclude_blog_ids ) ) {
-				$exclude_blog_ids = array_map( 'intval', (array) $exclude_blog_ids );
-				$exclude_blog_ids = implode( ',', $exclude_blog_ids );
+
+		if ( $blogs === false ) {
+			//If necessary, prepare the where clause
+			$where = array();
+			if ( $blog_ids ) {
+				if ( is_array( $blog_ids ) ) {
+					$blog_ids = array_map( 'intval', (array) $blog_ids );
+					$blog_ids = implode( ',', $blog_ids );
+				}
+				$where[] = sprintf( 'blog_id IN (%s)', $blog_ids );
 			}
-			$where[] = sprintf( 'blog_id NOT IN (%s)', $exclude_blog_ids );
-		}
+			if ( $exclude_blog_ids ) {
+				if ( is_array( $exclude_blog_ids ) ) {
+					$exclude_blog_ids = array_map( 'intval', (array) $exclude_blog_ids );
+					$exclude_blog_ids = implode( ',', $exclude_blog_ids );
+				}
+				$where[] = sprintf( 'blog_id NOT IN (%s)', $exclude_blog_ids );
+			}
 
-		//クエリの組み立て
-		$query[] = sprintf( 'SELECT * FROM %sblogs', $wpdb->prefix );
-		if ( $where ) {
-			$query[] = "WHERE " . implode(' AND ', $where);
-		}
-		$query[] = 'ORDER BY blog_id';
-		$query = implode( ' ', $query );
+			//Build query
+			$query[] = sprintf( 'SELECT * FROM %sblogs', $wpdb->prefix );
+			if ( $where ) {
+				$query[] = "WHERE " . implode(' AND ', $where);
+			}
+			$query[] = 'ORDER BY blog_id';
+			$query = implode( ' ', $query );
 
-		//問い合わせの実行
-		$blogs = $wpdb->get_results( $query );
+			//Execute query
+			$blogs = $wpdb->get_results( $query );
 
-		//各ブログの情報を取得
-		foreach ( $blogs as &$blog ) {
-			switch_to_blog( $blog->blog_id );
-			$blog->name = get_bloginfo('name');
-			$blog->home_url = get_home_url();
-			restore_current_blog();
+			//Arrange blog information
+			foreach ( $blogs as &$blog ) {
+				switch_to_blog( $blog->blog_id );
+				$blog->name = get_bloginfo('name');
+				$blog->home_url = get_home_url();
+				restore_current_blog();
+			}
+
+			if ( $transient_expiration ) {
+				self::_set_transient( $transientkey, $blogs, $transient_expiration);
+			}
 		}
 
 		return $blogs;
@@ -165,6 +189,31 @@ class wp_over_network
 		$post->blog_name = get_bloginfo( 'name' );
 		$post->blog_home_url = get_home_url();
 		setup_postdata( $post );
+	}
+
+	/**
+	 * Set/update the value of a transient with plugin prefix.
+	 * @param  string  $transient  Transient name. Expected to not be SQL-escaped.
+	 * @param  mixed  $value  Transient value. Expected to not be SQL-escaped.
+	 * @param  integer  $expiration[optional]  Time until expiration in seconds from now, or 0 for never expires. Ex: For one day, the expiration value would be: (60 * 60 * 24). *Default is 3600*.
+	 * @return boolean
+	 * @see http://codex.wordpress.org/Function_Reference/set_transient
+	 */
+	static protected function _set_transient( $transient, $value, $expiration = 3600 ) {
+		$transient = sha1( $transient );
+		return set_site_transient(self::WPON_PREFIX . $transient, $value, $expiration );
+	}
+
+	/**
+	 * Get the value of a transient with plugin prefix.
+	 * If the transient does not exist or does not have a value, then the return value will be false.
+	 * @param  string  $transient  Transient name. Expected to not be SQL-escaped.
+	 * @return  mixed
+	 * @see http://codex.wordpress.org/Function_Reference/get_transient
+	 */
+	static protected function _get_transient( $transient ) {
+		$transient = sha1( $transient );
+		return get_site_transient( self::WPON_PREFIX . $transient );
 	}
 
 }
