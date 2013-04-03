@@ -8,41 +8,9 @@ Author URI: http://
 Version: 0.0.1
 */
 
-
-add_action('init', 'wp_over_network::setup');
-
-
 class wp_over_network
 {
 	const WPONW_PREFIX = 'wponw_';
-
-
-	/**
-	 * Initialize this plugin.
-	 * @return  void
-	 */
-	static public function setup() {
-		add_shortcode('the_posts_over_network', 'wp_over_network::the_posts');
-	}
-
-	/**
-	 * ショートコード的に使えるように考えようと思いましたが、
-	 * どうもしっくり来ないので、また打ち合わせさせてください。> @HissyNC
-	 */
-	static public function the_posts( $atts ) {
-		$atts = shortcode_atts( array(
-			'template' => null,
-		), $atts );
-		extract( $atts );
-
-		if ( empty( $template ) ) {
-			throw new ErrorException('Must specify template.');
-		}
-
-		$posts = self::get_post( $atts );
-
-		require $template;
-	}
 
 	/**
 	 * Get posts over network.
@@ -262,3 +230,109 @@ class wp_over_network
 	}
 
 }
+
+/*
+ * based on default recent posts widget
+ */
+class WP_Widget_Recent_Posts_Over_Network extends WP_Widget {
+
+	function __construct() {
+		$widget_ops = array('classname' => 'widget_recent_entries_over_network', 'description' => __( "The most recent posts on your network") );
+		parent::__construct('recent-posts-over-network', __('Recent Posts over Network'), $widget_ops);
+		$this->alt_option_name = 'widget_recent_entries_over_network';
+
+		add_action( 'save_post', array($this, 'flush_widget_cache') );
+		add_action( 'deleted_post', array($this, 'flush_widget_cache') );
+		add_action( 'switch_theme', array($this, 'flush_widget_cache') );
+	}
+
+	function widget($args, $instance) {
+		$cache = wp_cache_get('widget_recent_posts_over_network', 'widget');
+
+		if ( !is_array($cache) )
+			$cache = array();
+
+		if ( ! isset( $args['widget_id'] ) )
+			$args['widget_id'] = $this->id;
+
+		if ( isset( $cache[ $args['widget_id'] ] ) ) {
+			echo $cache[ $args['widget_id'] ];
+			return;
+		}
+
+		ob_start();
+		extract($args);
+
+		$title = apply_filters('widget_title', empty($instance['title']) ? __('Recent Posts over Network') : $instance['title'], $instance, $this->id_base);
+		if ( empty( $instance['number'] ) || ! $number = absint( $instance['number'] ) )
+ 			$number = 10;
+		$show_date = isset( $instance['show_date'] ) ? $instance['show_date'] : false;
+		
+		$wp_over_network = new wp_over_network;
+		$posts = $wp_over_network->get_posts( apply_filters( 'widget_wpovn_posts_args', array( 'numberposts' => $number ) ) );
+		
+		if ($posts) :
+?>
+		<?php echo $before_widget; ?>
+		<?php if ( $title ) echo $before_title . $title . $after_title; ?>
+		<ul>
+		<?php
+		foreach ( $posts as $post ):
+			switch_to_blog( $post->blog_id );
+			$post = get_post( $post->ID );
+			$the_date = mysql2date(get_option('date_format'), $post->post_date);
+			?>
+			<li>
+				<a href="<?php echo home_url(); ?>"><?php echo get_bloginfo('name'); ?></a> - 
+				<a href="<?php echo esc_url(get_permalink($post->ID)); ?>" title="<?php echo esc_attr( get_the_title($post) ); ?>"><?php echo get_the_title($post); ?></a>
+			<?php if ( $show_date ) : ?>
+				<span class="post-date"><?php echo apply_filters('get_the_date', $the_date); ?></span>
+			<?php endif; ?>
+			</li>
+			<?php
+			restore_current_blog();
+		endforeach;
+		?>
+		</ul>
+		<?php echo $after_widget; ?>
+<?php
+		endif;
+
+		$cache[$args['widget_id']] = ob_get_flush();
+		wp_cache_set('widget_recent_posts_over_network', $cache, 'widget');
+	}
+
+	function update( $new_instance, $old_instance ) {
+		$instance = $old_instance;
+		$instance['title'] = strip_tags($new_instance['title']);
+		$instance['number'] = (int) $new_instance['number'];
+		$instance['show_date'] = (bool) $new_instance['show_date'];
+		$this->flush_widget_cache();
+
+		return $instance;
+	}
+
+	function flush_widget_cache() {
+		wp_cache_delete('widget_recent_posts_over_network', 'widget');
+	}
+
+	function form( $instance ) {
+		$title     = isset( $instance['title'] ) ? esc_attr( $instance['title'] ) : '';
+		$number    = isset( $instance['number'] ) ? absint( $instance['number'] ) : 5;
+		$show_date = isset( $instance['show_date'] ) ? (bool) $instance['show_date'] : false;
+?>
+		<p><label for="<?php echo $this->get_field_id( 'title' ); ?>"><?php _e( 'Title:' ); ?></label>
+		<input class="widefat" id="<?php echo $this->get_field_id( 'title' ); ?>" name="<?php echo $this->get_field_name( 'title' ); ?>" type="text" value="<?php echo $title; ?>" /></p>
+
+		<p><label for="<?php echo $this->get_field_id( 'number' ); ?>"><?php _e( 'Number of posts to show:' ); ?></label>
+		<input id="<?php echo $this->get_field_id( 'number' ); ?>" name="<?php echo $this->get_field_name( 'number' ); ?>" type="text" value="<?php echo $number; ?>" size="3" /></p>
+
+		<p><input class="checkbox" type="checkbox" <?php checked( $show_date ); ?> id="<?php echo $this->get_field_id( 'show_date' ); ?>" name="<?php echo $this->get_field_name( 'show_date' ); ?>" />
+		<label for="<?php echo $this->get_field_id( 'show_date' ); ?>"><?php _e( 'Display post date?' ); ?></label></p>
+<?php
+	}
+}
+function wponw_widget_init() {
+	register_widget( 'WP_Widget_Recent_Posts_Over_Network' );
+}
+add_action( 'widgets_init', 'wponw_widget_init' );
