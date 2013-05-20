@@ -8,6 +8,60 @@ Updates
 
 
 
+
+Reference
+----------
+
+### wponw::get\_posts( $args )
+
+Get posts over network.
+
+* @return array<stdClass>
+* @params  mixed  $args
+    * **numberposts**    取得する投稿数。デフォルトは 5
+    * **offset**    取得する投稿のオフセット。デフォルトは false で指定無し。指定すると、paged より優先。
+    * **paged**    取得する投稿のページ数。get\_query\_var( 'paged' ) の値または１のいずれか大きな方。
+    * **post\_type**    取得する投稿タイプ。カンマ区切りまたは配列で複数指定可。デフォルトは post。
+    * **orderby**    並び替え対象。デフォルトは post\_date
+    * **order**    並び替え順。デフォルトは DESC で降順
+    * **post\_status**    投稿のステータス。デフォルトは publish
+    * **blog\_ids**    取得するブログのIDを指定。デフォルトは null で指定無し
+    * **exclude\_blog\_ids**    除外するブログのIDを指定。デフォルトは null で指定無し
+    * **affect\_wp\_query**    wp_query を書き換えるか否か。デフォルトは false で書き換えない。wp\_pagenavi など $wp\_query を参照するページャープラグインの利用時には true とする
+    * **transient\_expires\_in**  TransientAPI を利用する場合に指定。transient の有効期間を秒で指定する。デフォルトは 0 で、transient を利用しない。
+
+
+### wponw::get\_blogs( $args )
+
+Get blog list.
+
+* @return array<object>    返される各ブログの情報を持つオブジェクトは、ブログID、ブログ名とその Home URL を含む。
+* @params  mixed  $args
+    * **blog\_ids**  取得するブログのIDを指定。デフォルトは null で指定無し
+    * **exclude\_blog\_ids**  除外するブログのIDを指定。デフォルトは null で指定無し
+    * **transient\_expires\_in**  TransientAPI を利用する場合に指定。transient の有効期間を秒で指定する。デフォルトは false で、transient を利用しない。
+
+
+
+### wponw::setup\_blog\_and\_postdata( $post )
+
+This is simply utility function.
+This method will execute both the `switch_to_blog` and `setup_postdata`.
+
+* @return  void
+* @params  mixed  $post    投稿データ。$post->blog_id を保持していること。
+
+
+
+### wponw::restore\_blog\_and\_postdata()
+
+This is simply utility function.
+This method will execute both the `restore_current_blog` and `wp_reset_postdata`.
+
+* @return  void
+
+
+
 Usage
 ----------
 
