@@ -5,7 +5,7 @@ Plugin URI: http://
 Description: Utilities for network site on WordPress
 Author: @HissyNC, @yuka2py
 Author URI: http://
-Version: 0.1.13
+Version: 0.1.13.1
 */
 
 add_action( 'plugins_loaded', array( 'wponw', 'setup' ) );
@@ -161,7 +161,7 @@ class wponw
 			$wp_query->found_posts = $found_posts;
 			$wp_query->max_num_pages = ceil( $found_posts / $numberposts );
 
-			$wp_query = array_filter( 'wponw_affect_wp_query', $wp_query );
+			$wp_query = apply_filters( 'wponw_affect_wp_query', $wp_query );
 		}
 
 		return $posts;
