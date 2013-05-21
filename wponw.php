@@ -10,15 +10,19 @@ Version: 0.1.13.1
 
 add_action( 'plugins_loaded', array( 'wponw', 'setup' ) );
 
+
 class wponw
 {
 	/**
 	 * Plugin prefix.
-	 * NOTE: 5 characters less.
 	 */
 	const WPONW_PREFIX = 'wponw';
 
 
+	/**
+	 * Plugin directory path.
+	 * @var string
+	 */
 	protected static $_plugin_directory;
 
 
@@ -27,6 +31,15 @@ class wponw
 	 * @return void
 	 */
 	private function __construct() { }
+
+
+
+
+	####
+	#### PLUGIN SETUP
+	####
+
+
 
 
 	/**
@@ -41,7 +54,7 @@ class wponw
 		add_action( 'widgets_init', array( 'wponw', 'action_widgets_init' ) );
 
 		//Add shortcode.
-		add_shortcode('wponw_posts_archive', array( 'wponw', 'get_posts_with_template' ) );
+		add_shortcode('wponw_recent_post_list', array( 'wponw', 'render_post_archive' ) );
 	}
 
 
@@ -55,20 +68,29 @@ class wponw
 	}
 
 
+
+
+	####
+	#### MAIN FUNCTIONS
+	####
+
+
+
+
 	/**
 	 * Get posts over network.
 	 * @param  mixed  $args
-	 *    numberposts    取得する投稿数。デフォルトは 5
-	 *    offset    取得する投稿のオフセット。デフォルトは false で指定無し。指定すると、paged より優先。
-	 *    paged    取得する投稿のページ数。get_query_var( 'paged' ) の値または１のいずれか大きな方。
-	 *    post_type    取得する投稿タイプ。カンマ区切りまたは配列で複数指定可。デフォルトは post。
-	 *    orderby    並び替え対象。デフォルトは post_date
-	 *    order    並び替え順。デフォルトは DESC で降順
-	 *    post_status    投稿のステータス。デフォルトは publish
-	 *    blog_ids    取得するブログのIDを指定。デフォルトは null で指定無し
-	 *    exclude_blog_ids    除外するブログのIDを指定。デフォルトは null で指定無し
-	 *    affect_wp_query    wp_query を書き換えるか否か。デフォルトは false で書き換えない。wp_pagenavi など wp_query を参照するページャープラグインの利用時には true とする
-	 *    transient_expires_in  TransientAPI を利用する場合に指定。transient の有効期間を秒で指定する。デフォルトは 0 で、transient を利用しない。
+	 *    numberposts    Max number of posts to get。Default is 5.
+	 *    offset    Offset number to get. Default is false. If specified, it takes precedence over 'paged'.
+	 *    paged    Page number to get. Default is get_query_var( 'paged' ) or 1.
+	 *    post_type    Post type to get. Multiple be specified in an array or comma-separated. Default is 'post'
+	 *    orderby    Order terget. Default is 'post_date'
+	 *    order    Order method. DESC or ASC. Default is DESC.
+	 *    post_status    Post status to get. Default is publish.
+	 *    blog_ids    IDs of the blog to get. Default is null.
+	 *    exclude_blog_ids    IDs of the blog that you want to exclude. Default is null.
+	 *    affect_wp_query    Whether or not affect the $wp_query. Default is false, means NOT affect. Specify true for the plugins that depend on $ wp_query.
+	 *    transient_expires_in  Specify seconds of the expiry for the cache. Default is 0, means Transient not use.
 	 * @return  array<stdClass>
 	 */
 	static public function get_posts( $args=null ) {
@@ -226,7 +248,7 @@ class wponw
 			//Execute query
 			$blogs = $wpdb->get_results( $query );
 
-			//Arrange blog information
+			//Add additional blog info.
 			foreach ( $blogs as &$blog ) {
 				switch_to_blog( $blog->blog_id );
 				$blog->name = get_bloginfo('name');
@@ -261,6 +283,7 @@ class wponw
 		setup_postdata( $post );
 	}
 
+
 	/**
 	 * This is simply utility function.
 	 * This method will execute both the restore_current_blog and wp_reset_postdata.
@@ -272,6 +295,57 @@ class wponw
 	}
 
 
+	/**
+	 * Render archive html.
+	 * @param  mixed $args  see self::render_post_archive_to_string.
+	 * @return void
+	 */
+	static public function render_post_archive( $args=null ) {
+		echo self::render_post_archive_to_string( $args );
+	}
+
+
+
+	/**
+	 * Get rendered archive html.
+	 * @param  mixed $args  Can use arguments of below and wponw::get_posts args.
+	 * 	calable  renderer    Provides an alternative to the rendering logic by your function.
+	 * 	string  tempate   Is not specified, the default template used.
+	 * 	integer  show_date    Whether to display the date if default template used.
+	 * @return string
+	 */
+	static public function render_post_archive_to_string( $args=null ) {
+		$args = wp_parse_args( $args, array( 
+			'renderer' => null,
+			'template' => 'archive-simple',
+			'show_date' => true,
+		) );
+
+		$posts = self::get_posts( $args );
+
+		if ( empty( $args['renderer'] ) ) {
+			$args['posts'] = $posts;
+			return self::render_to_string( $args['template'], $args );
+		} else {
+			return call_user_func( $args['renderer'], $posts, $args );
+		}
+	}
+
+
+
+
+	####
+	#### UTILITIES
+	####
+
+
+
+
+	/**
+	 * Make trasient key.
+	 * @param  mixed $key
+	 * @return string
+	 */
 	static private function _transient_key( $key ) {
 		if ( ! is_string( $key ) ) {
 			$key = sha1( serialize( $key ) );
@@ -290,14 +364,16 @@ class wponw
 		echo self::render_to_string( $template_name, $vars );
 	}
 
-
 	/**
 	 * Get rendered string.
 	 * @param  string  $template_name
 	 * @param  array  $vars
 	 */
 	static public function render_to_string( $template_name, $vars=array() ) {
-		$template = self::$_plugin_directory . implode( DIRECTORY_SEPARATOR, array( 'templates', $template_name ) ) . '.php';
+		$template = self::locate_template( $template_name );
+		if ( empty( $template ) ) {
+			throw new ErrorException( "Missing template. template_name is \"{$template_name}\"." );
+		}
 		return self::_render_to_string( $template, $vars );
 	}
 
@@ -306,13 +382,34 @@ class wponw
 	 * @param  string  $tempate
 	 * @param  array  $vars
 	 */
-	static public function _render_to_string( $template, $vars ) {
-		extract( $vars );
-		unset( $vars );
+	static public function _render_to_string( $__template, $__vars ) {
+		extract( $__vars );
+		unset( $__vars );
 		ob_start();
-		require $template;
+		require $__template;
 		$renderd = ob_get_contents();
 		ob_end_clean();
 		return $renderd;
 	}
+
+	/**
+	 * Locate template.
+	 * @param  string|array<string> $template_names
+	 * @return string Lacated file path or null.
+	 */
+	function locate_template( $template_names ) {
+		$located = null;
+		foreach ( (array) $template_names as $template_name ) {
+			if ( ! $template_name ) continue;
+			$template_name .= '.php';
+			file_exists( $located = self::$_plugin_directory . 'templates/' . $template_name )
+			or file_exists( $located = STYLESHEETPATH . '/' . $template_name )
+			or file_exists( $located = TEMPLATEPATH . '/' . $template_name )
+			or $located = null;
+			if ( $located ) break;
+		}
+
+		return $located;
+	}
+
 }

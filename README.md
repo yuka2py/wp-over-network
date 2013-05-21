@@ -4,8 +4,8 @@ WP Over Network
 Updates
 ----------
 
-
-* Version: 0.1.13 -- Widget added. Fixed a problem of the use of Transient API. Change the class names.
+* v0.2.1 -- Shortcode added. and fixed bugs.
+* v0.1.13 -- Widget added. Fixed a problem of the use of Transient API. Change the class names.
 
 
 
@@ -29,7 +29,7 @@ Get posts over network.
     * **blog\_ids**    取得するブログのIDを指定。デフォルトは null で指定無し
     * **exclude\_blog\_ids**    除外するブログのIDを指定。デフォルトは null で指定無し
     * **affect\_wp\_query**    wp_query を書き換えるか否か。デフォルトは false で書き換えない。wp\_pagenavi など $wp\_query を参照するページャープラグインの利用時には true とする
-    * **transient\_expires\_in**  TransientAPI を利用する場合に指定。transient の有効期間を秒で指定する。デフォルトは 0 で、transient を利用しない。
+    * **transient\_expires\_in**  Transient API を利用する場合に指定。transient の有効期間を秒で指定する。デフォルトは 0 で、transient を利用しない。
 
 
 ### wponw::get\_blogs( $args )
@@ -40,7 +40,7 @@ Get blog list.
 * @params  mixed  $args
     * **blog\_ids**  取得するブログのIDを指定。デフォルトは null で指定無し
     * **exclude\_blog\_ids**  除外するブログのIDを指定。デフォルトは null で指定無し
-    * **transient\_expires\_in**  TransientAPI を利用する場合に指定。transient の有効期間を秒で指定する。デフォルトは false で、transient を利用しない。
+    * **transient\_expires\_in**  Transient API を利用する場合に指定。transient の有効期間を秒で指定する。デフォルトは false で、transient を利用しない。
 
 
 
@@ -63,10 +63,16 @@ This method will execute both the `restore_current_blog` and `wp_reset_postdata`
 
 
 
+
+
+
+
+
+
 Usage
 ----------
 
-
+### In template
 
 ```php
 <?php 
@@ -117,3 +123,50 @@ wp_reset_query();
 get_sidebar();
 get_footer();
 ```
+
+
+### Using as Shortcode
+
+
+Arguments, can be used the same as wponw::render\_post\_archive\_to\_string.
+
+
+#### Display with default.
+
+```
+[wponw_recent_post_list]
+```
+
+
+#### When use your template and specified post\_types.
+
+```
+[wponw_recent_post_list numberposts=8 post_type=products,promotions,information template=YourTemplateName]
+```
+
+NOTICE: YourTemplateName will not set file extension.
+
+
+#### If you want to draw your own.
+
+
+```
+[wponw_recent_post_list numberposts=5 post_type= renderer=YourRenderFunction]
+```
+
+
+#### To create an archive page with a page
+
+You create the new page, and write the below shortcode in the post content.
+
+```
+[wponw_recent_post_list post_type=products,updates]
+```
+
+
+
+
+
+
+
+
