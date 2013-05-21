@@ -5,7 +5,7 @@ Plugin URI: http://
 Description: Utilities for network site on WordPress
 Author: @HissyNC, @yuka2py
 Author URI: http://
-Version: 0.1.13.1
+Version: 0.2.1.0
 */
 
 add_action( 'plugins_loaded', array( 'wponw', 'setup' ) );
@@ -54,7 +54,7 @@ class wponw
 		add_action( 'widgets_init', array( 'wponw', 'action_widgets_init' ) );
 
 		//Add shortcode.
-		add_shortcode('wponw_recent_post_list', array( 'wponw', 'render_post_archive' ) );
+		add_shortcode('wponw_recent_post_list', array( 'wponw', 'render_post_archive_to_string' ) );
 	}
 
 
@@ -327,7 +327,9 @@ class wponw
 			$args['posts'] = $posts;
 			return self::render_to_string( $args['template'], $args );
 		} else {
-			return call_user_func( $args['renderer'], $posts, $args );
+			ob_start();
+			call_user_func( $args['renderer'], $posts, $args );
+			return ob_get_clean();
 		}
 	}
 

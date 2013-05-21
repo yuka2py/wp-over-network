@@ -4,8 +4,9 @@ WP Over Network
 Updates
 ----------
 
-* v0.2.1 -- Shortcode added. and fixed bugs.
-* v0.1.13 -- Widget added. Fixed a problem of the use of Transient API. Change the class names.
+* v0.2.1.1 -- Fixed bugs on shortcode.
+* v0.2.1.0 -- Shortcode added. and fixed bugs.
+* v0.1.13.0 -- Widget added. Fixed a problem of the use of Transient API. Change the class names.
 
 
 
@@ -138,13 +139,13 @@ Arguments, can be used the same as wponw::render\_post\_archive\_to\_string.
 ```
 
 
-#### When use your template and specified post\_types.
+#### When use your template and specified 3 post\_types.
 
 ```
-[wponw_recent_post_list numberposts=8 post_type=products,promotions,information template=YourTemplateName]
+[wponw_recent_post_list numberposts=8 post_type=products,promotions,information template=TemplateFileNameInYourTheme]
 ```
 
-NOTICE: YourTemplateName will not set file extension.
+NOTICE: TemplateFileNameInYourTheme will not set file extension.
 
 
 #### If you want to draw your own.
