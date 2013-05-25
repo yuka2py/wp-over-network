@@ -14,9 +14,9 @@ class WPONW_RecentPostsWidget extends WP_Widget
 	function __construct() {
 		$widget_ops = array(
 			'classname' => 'WPONW_RecentPostsWidget', 
-			'description' => __( "The most recent posts on your network" ),
+			'description' => __( "The most recent posts on your network", wponw::WPONW_PREFIX ),
 		);
-		parent::__construct( self::IDENTIFIER, __( 'Recent Posts over Network' ), $widget_ops );
+		parent::__construct( self::IDENTIFIER, __( 'Recent Posts over Network', wponw::WPONW_PREFIX ), $widget_ops );
 		$this->alt_option_name = 'WPONW_RecentPostsWidget';
 
 		add_action( 'save_post', array( $this, 'flush_widget_cache' ) );
@@ -41,7 +41,7 @@ class WPONW_RecentPostsWidget extends WP_Widget
 		}
 
 		//Get widget config.
-		$widget_title = empty( $instance['widget_title'] ) ? __( 'Recent Posts over Network' ) : $instance['widget_title'];
+		$widget_title = empty( $instance['widget_title'] ) ? __( 'Recent Posts over Network', wponw::WPONW_PREFIX ) : $instance['widget_title'];
 		$widget_title = apply_filters( 'widget_title', $widget_title, $instance, $this->id_base );
 		$numberposts = empty( $instance['numberposts'] ) ? 10 : absint( $instance['numberposts'] );
 		if ( empty( $numberposts ) ) {

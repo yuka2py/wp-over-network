@@ -4,6 +4,7 @@ WP Over Network
 Updates
 ----------
 
+* v0.3.0.0 -- Supports internationalization.
 * v0.2.1.1 -- Fixed bugs on shortcode.
 * v0.2.1.0 -- Shortcode added. and fixed bugs.
 * v0.1.13.0 -- Widget added. Fixed a problem of the use of Transient API. Change the class names.

@@ -1,11 +1,11 @@
 <?php
 /*
 Plugin Name: WP Over Network
-Plugin URI: http://
+Plugin URI: http://foreignkey.jp/wp-over-netowrk#author
 Description: Utilities for network site on WordPress
 Author: @HissyNC, @yuka2py
-Author URI: http://
-Version: 0.2.1.0
+Author URI: http://foreignkey.jp/wp-over-netowrk#author
+Version: 0.3.0.0
 */
 
 add_action( 'plugins_loaded', array( 'wponw', 'setup' ) );
@@ -47,6 +47,10 @@ class wponw
 	 * @return void
 	 */
 	static public function setup() {
+
+		//Loading transration.
+		load_plugin_textdomain( wponw::WPONW_PREFIX, false, 'wp_over_network/languages' );
+
 		//Set base directory
 		self::$_plugin_directory = dirname( __FILE__ ) . DIRECTORY_SEPARATOR;
 
