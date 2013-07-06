@@ -4,7 +4,7 @@ Donate link: none
 Tags: posts, blogs, network, multisite
 Requires at least: 3.5
 Tested up to: 3.5.1
-Stable tag: 
+Stable tag: 0.3.1.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,14 +26,21 @@ This plugin contains the function to get the post data from the network site, an
 3. using in your template or shortcode or widget.
 
 
-
-
 == Screenshots ==
 
 1. Widget setting.
 2. Widget on front site.
 
 
+
+== Upgrade Notice ==
+
+None
+
+
+== Frequently Asked Questions ==
+
+None
 
 
 == Usage ==
@@ -108,7 +115,7 @@ Arguments, can be used the same as `wponw::render_post_archive_to_string`.
   [wponw_recent_post_list numberposts=5 post_type=products renderer=YourRenderFunction]
 
 
-= To create an archive page with a page.
+* To create an archive page with a page.
   You create the new page, and write the below shortcode in the post content.
   
   [wponw_recent_post_list post_type=products,updates]
@@ -120,8 +127,8 @@ Arguments, can be used the same as `wponw::render_post_archive_to_string`.
 
 == Changelog ==
 
-= 0.3.1.0 =
-* Update document.
+= 0.3.1.0, 0.3.1.1 =
+* Update document. and Fixed a mistake in the readme.
 
 = 0.3.0.0 =
 * Supports internationalization.

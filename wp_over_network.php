@@ -5,7 +5,7 @@ Plugin URI: https://github.com/yuka2py/wp_over_network
 Description: Utilities for network site on WordPress
 Author: @HissyNC, @yuka2py
 Author URI: https://github.com/yuka2py/wp_over_network
-Version: 0.3.1.0
+Version: 0.3.1.1
 */
 
 add_action( 'plugins_loaded', array( 'wponw', 'setup' ) );
