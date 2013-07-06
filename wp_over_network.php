@@ -1,11 +1,11 @@
 <?php
 /*
 Plugin Name: WP Over Network
-Plugin URI: http://foreignkey.jp/wp-over-netowrk#author
+Plugin URI: https://github.com/yuka2py/wp_over_network
 Description: Utilities for network site on WordPress
 Author: @HissyNC, @yuka2py
-Author URI: http://foreignkey.jp/wp-over-netowrk#author
-Version: 0.3.0.0
+Author URI: https://github.com/yuka2py/wp_over_network
+Version: 0.3.1.0
 */
 
 add_action( 'plugins_loaded', array( 'wponw', 'setup' ) );
@@ -93,7 +93,7 @@ class wponw
 	 *    post_status    Post status to get. Default is publish.
 	 *    blog_ids    IDs of the blog to get. Default is null.
 	 *    exclude_blog_ids    IDs of the blog that you want to exclude. Default is null.
-	 *    affect_wp_query    Whether or not affect the $wp_query. Default is false, means NOT affect. Specify true for the plugins that depend on $ wp_query.
+	 *    affect_wp_query    Whether or not affect the $wp_query. Default is false, means NOT affect. Specify true for the plugins that depend on $wp_query.
 	 *    transient_expires_in  Specify seconds of the expiry for the cache. Default is 0, means Transient not use.
 	 * @return  array<stdClass>
 	 */
@@ -183,7 +183,6 @@ class wponw
 		if ( $affect_wp_query ) {
 			global $wp_query;
 			$wp_query = new WP_Query( array( 'posts_per_page'=>$numberposts ) );
-			// $wp_query->query_vars['posts_per_page'] = $numberposts;
 			$wp_query->found_posts = $found_posts;
 			$wp_query->max_num_pages = ceil( $found_posts / $numberposts );
 
@@ -197,11 +196,11 @@ class wponw
 
 	/**
 	 * Get blog list.
-	 * 返される各ブログの情報を持つオブジェクトは、ブログ名とその Home URL を含む。
+	 * Object to be returned, including the Home URL and blog name in addition to the blog data.
 	 * @param  mixed  $args
-	 *    blog_ids  取得するブログのIDを指定。デフォルトは null で指定無し
-	 *    exclude_blog_ids  除外するブログのIDを指定。デフォルトは null で指定無し
-	 *    transient_expires_in  TransientAPI を利用する場合に指定。transient の有効期間を秒で指定する。デフォルトは false で、transient を利用しない。
+	 *    blog_ids    Specifies the blog ID to get. Default is null.
+	 *    exclude_blog_ids    Specifies the blog ID to exclude. Default is null.
+	 *    transient_expires_in    Specify when using the Transient API. specify the value, in seconds. Default is false, means not use Transient API.
 	 * @return  array<stdClass>
 	 */
 	static public function get_blogs( $args=null ) {
@@ -271,10 +270,10 @@ class wponw
 
 
 	/**
-	 * 投稿データをブログとともにセットアップする。
-	 * 内部的に switch_to_blog を使っているので、呼び出した後の処理が終わったら、
-	 * restore_current_blog() を都度コールする
-	 * @param  array  $post  投稿データ。$post->blog_id を保持していること。
+	 * This is utility function for set up to post data and blog.
+	 * This function will execute both the switch_to_blog and setup_postdata.
+	 * After necessary processing, please call the restore_blog_and_postdata.
+	 * @param  object  $post  post data, including the blog_id.
 	 * @return void
 	 */
 	static public function setup_blog_and_postdata( $post ) {
@@ -290,7 +289,7 @@ class wponw
 
 	/**
 	 * This is simply utility function.
-	 * This method will execute both the restore_current_blog and wp_reset_postdata.
+	 * This function will execute both the restore_current_blog and wp_reset_postdata.
 	 * @return  void
 	 */
 	static public function restore_blog_and_postdata() {
@@ -307,7 +306,6 @@ class wponw
 	static public function render_post_archive( $args=null ) {
 		echo self::render_post_archive_to_string( $args );
 	}
-
 
 
 	/**
@@ -348,20 +346,6 @@ class wponw
 
 
 	/**
-	 * Make trasient key.
-	 * @param  mixed $key
-	 * @return string
-	 */
-	static private function _transient_key( $key ) {
-		if ( ! is_string( $key ) ) {
-			$key = sha1( serialize( $key ) );
-		}
-		$key = substr($key, 0, 45 - strlen( self::WPONW_PREFIX ) );
-		return self::WPONW_PREFIX . $key;
-	}
-
-
-	/**
 	 * Render template.
 	 * @param  string  $template_name
 	 * @param  array  $vars
@@ -388,7 +372,7 @@ class wponw
 	 * @param  string  $tempate
 	 * @param  array  $vars
 	 */
-	static public function _render_to_string( $__template, $__vars ) {
+	static private function _render_to_string( $__template, $__vars ) {
 		extract( $__vars );
 		unset( $__vars );
 		ob_start();
@@ -399,11 +383,24 @@ class wponw
 	}
 
 	/**
+	 * Make trasient key.
+	 * @param  mixed $key
+	 * @return string
+	 */
+	static private function _transient_key( $key ) {
+		if ( ! is_string( $key ) ) {
+			$key = sha1( serialize( $key ) );
+		}
+		$key = substr($key, 0, 45 - strlen( self::WPONW_PREFIX ) );
+		return self::WPONW_PREFIX . $key;
+	}
+
+	/**
 	 * Locate template.
 	 * @param  string|array<string> $template_names
 	 * @return string Lacated file path or null.
 	 */
-	function locate_template( $template_names ) {
+	static public function locate_template( $template_names ) {
 		$located = null;
 		foreach ( (array) $template_names as $template_name ) {
 			if ( ! $template_name ) continue;
