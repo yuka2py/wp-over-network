@@ -4,7 +4,7 @@ Donate link: None currently.
 Tags: posts, blogs, network, multisite
 Requires at least: 3.5
 Tested up to: 3.5.1
-Stable tag: 0.4.0
+Stable tag: 0.4.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -111,9 +111,12 @@ You create the new page, and write the below shortcode in the post content.
 
 == Upgrade Notice ==
 
-= 0.4.0 =
+= 0.4.2 =
 * I changed the file name, for the plug-in file management issues on.
 
+
+= 0.4.0 / 0.4.1 =
+* DO NOT Install. there is bugs. sorry...
 
 
 == Frequently Asked Questions ==
@@ -124,7 +127,7 @@ None currently.
 
 == Changelog ==
 
-= 0.4.0 =
+= 0.4.2 =
 * Added settings to widget
 * Bug fix
 
