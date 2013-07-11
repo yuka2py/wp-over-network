@@ -5,7 +5,7 @@ Plugin URI: https://github.com/yuka2py/wp_over_network
 Description: Utilities for network site on WordPress
 Author: HissyNC, yuka2py
 Author URI: https://github.com/yuka2py/wp_over_network
-Version: 0.3.1.4
+Version: 0.4.0
 */
 
 add_action( 'plugins_loaded', array( 'wponw', 'setup' ) );
@@ -226,18 +226,10 @@ class wponw
 			//If necessary, prepare the where clause
 			$where = array();
 			if ( $blog_ids ) {
-				if ( is_array( $blog_ids ) ) {
-					$blog_ids = array_map( 'intval', (array) $blog_ids );
-					$blog_ids = implode( ',', $blog_ids );
-				}
-				$where[] = sprintf( 'blog_id IN (%s)', $blog_ids );
+				$where[] = sprintf( 'blog_id IN (%s)', self::cleanids( $blog_ids ) );
 			}
 			if ( $exclude_blog_ids ) {
-				if ( is_array( $exclude_blog_ids ) ) {
-					$exclude_blog_ids = array_map( 'intval', (array) $exclude_blog_ids );
-					$exclude_blog_ids = implode( ',', $exclude_blog_ids );
-				}
-				$where[] = sprintf( 'blog_id NOT IN (%s)', $exclude_blog_ids );
+				$where[] = sprintf( 'blog_id NOT IN (%s)', self::cleanids( $exclude_blog_ids ) );
 			}
 
 			//Build query
@@ -413,6 +405,17 @@ class wponw
 		}
 
 		return $located;
+	}
+
+
+	static public function cleanids($ids) {
+		if ( is_array( $ids ) ) {
+			$ids = array_map( 'intval', $ids );
+		} else {
+			$ids = preg_split( '/[^\d]+/', strval( $ids ), -1, PREG_SPLIT_NO_EMPTY );
+		}
+		$ids = implode(',', $ids);
+		return $ids;
 	}
 
 }

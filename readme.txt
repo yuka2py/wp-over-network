@@ -4,18 +4,18 @@ Donate link: None currently.
 Tags: posts, blogs, network, multisite
 Requires at least: 3.5
 Tested up to: 3.5.1
-Stable tag: 0.3.1.4
+Stable tag: 0.4.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 Add ability to get posts from over your network sites. Supports widget, shortcode, and customizable original function.
+
 
 == Description ==
 
 Add ability to get posts from over your network sites. Supports widget, shortcode, and customizable original function.
 
 Use the following:
-
 
 
 = In template =
@@ -111,7 +111,8 @@ You create the new page, and write the below shortcode in the post content.
 
 == Upgrade Notice ==
 
-None currently.
+= 0.4.0 =
+* I changed the file name, for the plug-in file management issues on.
 
 
 
@@ -122,6 +123,10 @@ None currently.
 
 
 == Changelog ==
+
+= 0.4.0 =
+* Added settings to widget
+* Bug fix
 
 = 0.3.1.x =
 * Update document. and Fixed a mistake in the readme.

@@ -50,6 +50,8 @@ class WPONW_RecentPostsWidget extends WP_Widget
 		$show_date = isset( $instance['show_date'] ) ? $instance['show_date'] : false;
 		$transient_expires_in = isset( $instance['transient_expires_in'] ) ? absint( $instance['transient_expires_in'] ) : 0;
 		$post_type = isset( $instance['post_type'] ) ? $instance['post_type'] : 'post';
+		$blog_ids = ! empty( $instance['blog_ids'] ) ? $instance['blog_ids'] : null;
+		$exclude_blog_ids = ! empty( $instance['exclude_blog_ids'] ) ? $instance['exclude_blog_ids'] : null;
 
 		//Getting posts.
 		$getpostsargs = array( 
@@ -57,6 +59,8 @@ class WPONW_RecentPostsWidget extends WP_Widget
 			'numberposts' => $numberposts,
 			'transient_expires_in' => $transient_expires_in,
 			'post_type' => $post_type,
+			'blog_ids' => $blog_ids,
+			'exclude_blog_ids' => $exclude_blog_ids,
 		);
 		$getpostsargs = apply_filters( 'wponw_widget_get_posts_args', $getpostsargs );
 		$posts = wponw::get_posts( $getpostsargs );
@@ -82,6 +86,8 @@ class WPONW_RecentPostsWidget extends WP_Widget
 		$instance['show_date'] = (bool) $new_instance['show_date'];
 		$instance['transient_expires_in'] = absint( $new_instance['transient_expires_in'] );
 		$instance['post_type'] = trim( $new_instance['post_type'] );
+		$instance['blog_ids'] = wponw::cleanids( $new_instance['blog_ids'] );
+		$instance['exclude_blog_ids'] = wponw::cleanids( $new_instance['exclude_blog_ids'] );
 		$this->flush_widget_cache();
 
 		return $instance;
@@ -109,6 +115,12 @@ class WPONW_RecentPostsWidget extends WP_Widget
 		$post_type = isset( $instance['post_type'] ) ? $instance['post_type'] : 'post';
 		$post_type_id = $this->get_field_id( 'post_type' );
 		$post_type_name = $this->get_field_name( 'post_type' );
+		$blog_ids = isset( $instance['blog_ids'] ) ? $instance['blog_ids'] : null;
+		$blog_ids_id = $this->get_field_id( 'blog_ids' );
+		$blog_ids_name = $this->get_field_name( 'blog_ids' );
+		$exclude_blog_ids = isset( $instance['exclude_blog_ids'] ) ? $instance['exclude_blog_ids'] : null;
+		$exclude_blog_ids_id = $this->get_field_id( 'exclude_blog_ids' );
+		$exclude_blog_ids_name = $this->get_field_name( 'exclude_blog_ids' );
 
 		wponw::render( 'widget-form', compact(
 			'widget_title',
@@ -125,7 +137,15 @@ class WPONW_RecentPostsWidget extends WP_Widget
 			'transient_expires_in_name',
 			'post_type',
 			'post_type_id',
-			'post_type_name'
+			'post_type_name',
+			'blog_ids',
+			'blog_ids_id',
+			'blog_ids_name',
+			'exclude_blog_ids',
+			'exclude_blog_ids_id',
+			'exclude_blog_ids_name'
 		) );
 	}
+
+
 }
