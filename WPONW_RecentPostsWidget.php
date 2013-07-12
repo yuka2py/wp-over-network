@@ -11,13 +11,14 @@ class WPONW_RecentPostsWidget extends WP_Widget
 	const IDENTIFIER = 'wponw-reset-post-widget';
 
 
+
 	function __construct() {
 		$widget_ops = array(
 			'classname' => 'WPONW_RecentPostsWidget', 
 			'description' => __( "The most recent posts on your network", wponw::WPONW_PREFIX ),
 		);
 		parent::__construct( self::IDENTIFIER, __( 'Recent Posts over Network', wponw::WPONW_PREFIX ), $widget_ops );
-		$this->alt_option_name = 'WPONW_RecentPostsWidget';
+		// $this->alt_option_name = 'WPONW_RecentPostsWidget';
 
 		add_action( 'save_post', array( $this, 'flush_widget_cache' ) );
 		add_action( 'deleted_post', array( $this, 'flush_widget_cache' ) );

@@ -58,7 +58,9 @@ class wponw
 		add_action( 'widgets_init', array( 'wponw', 'action_widgets_init' ) );
 
 		//Add shortcode.
-		add_shortcode('wponw_recent_post_list', array( 'wponw', 'render_post_archive_to_string' ) );
+		add_shortcode('wponw_recent_post_list', array( 'wponw', 'render_post_archive_to_string' ) ); //deprecation
+		add_shortcode('wponw_post_list', array( 'wponw', 'render_post_archive_to_string' ) );
+		add_shortcode('wponw_reset_query', 'wp_reset_query' );
 	}
 
 
@@ -83,7 +85,7 @@ class wponw
 
 	/**
 	 * Get posts over network.
-	 * @param  mixed  $args
+	 * @param  mixed[optional]  $args
 	 *    numberposts    Max number of posts to get。Default is 5.
 	 *    offset    Offset number to get. Default is false. If specified, it takes precedence over 'paged'.
 	 *    paged    Page number to get. Default is get_query_var( 'paged' ) or 1.
@@ -168,6 +170,7 @@ class wponw
 
 			//Execute query
 			$posts = $wpdb->get_results( $query );
+			
 			$found_posts = $wpdb->get_results( 'SELECT FOUND_ROWS() as count' );
 			$found_posts = $found_posts[0]->count;
 
@@ -197,7 +200,7 @@ class wponw
 	/**
 	 * Get blog list.
 	 * Object to be returned, including the Home URL and blog name in addition to the blog data.
-	 * @param  mixed  $args
+	 * @param  mixed[optional]  $args
 	 *    blog_ids    Specifies the blog ID to get. Default is null.
 	 *    exclude_blog_ids    Specifies the blog ID to exclude. Default is null.
 	 *    transient_expires_in    Specify when using the Transient API. specify the value, in seconds. Default is false, means not use Transient API.
@@ -319,12 +322,14 @@ class wponw
 
 		if ( empty( $args['renderer'] ) ) {
 			$args['posts'] = $posts;
-			return self::render_to_string( $args['template'], $args );
+			$rendered = self::render_to_string( $args['template'], $args );
 		} else {
 			ob_start();
 			call_user_func( $args['renderer'], $posts, $args );
-			return ob_get_clean();
+			$rendered = ob_get_clean();
 		}
+
+		return $rendered;
 	}
 
 

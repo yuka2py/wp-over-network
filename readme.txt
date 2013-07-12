@@ -70,11 +70,11 @@ Use the following:
 
 = Using as Shortcode =
 
-Arguments, can be used the same as `wponw::render_post_archive_to_string`.
-
 **Display with default.**
 
 	[wponw_recent_post_list]
+
+Arguments, can be used the same as `wponw::render_post_archive_to_string`.
 
 **Use your template file, includes 3 post types**
 
@@ -90,7 +90,7 @@ NOTICE: DON'T include the file extension in TemplateFileNameInYourTheme.
 
 You create the new page, and write the below shortcode in the post content.
 
-	[wponw_recent_post_list post_type=products,updates]
+	[wponw_recent_post_list post_type=post exclude_blog_ids=1 affect_wp_query=true]
 
 
 
