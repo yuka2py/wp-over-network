@@ -47,7 +47,6 @@ class wponw
 	 * @return void
 	 */
 	static public function setup() {
-
 		//Loading transration.
 		load_plugin_textdomain( wponw::WPONW_PREFIX, false, 'wp_over_network/languages' );
 
@@ -95,6 +94,7 @@ class wponw
 	 *    post_status    Post status to get. Default is publish.
 	 *    blog_ids    IDs of the blog to get. Default is null.
 	 *    exclude_blog_ids    IDs of the blog that you want to exclude. Default is null.
+	 *    blog_conditions    get_blogs
 	 *    affect_wp_query    Whether or not affect the $wp_query. Default is false, means NOT affect. Specify true for the plugins that depend on $wp_query.
 	 *    transient_expires_in  Specify seconds of the expiry for the cache. Default is 0, means Transient not use.
 	 * @return  array<stdClass>
@@ -111,10 +111,11 @@ class wponw
 			'orderby' => 'post_date',
 			'order' => 'DESC',
 			'post_status' => 'publish',
+			'affect_wp_query' => false,
 			'blog_ids' => null,
 			'exclude_blog_ids' => null,
-			'affect_wp_query' => false,
-			'transient_expires_in' => 0,
+			'blog_conditions' => array(),
+			'transient_expires_in' => false,
 		) );
 
 		//Use the cached posts, If available.
@@ -138,8 +139,15 @@ class wponw
 				$offset = ( $paged - 1 ) * $numberposts;
 			}
 
-			//Get blog information
-			$blogs = self::get_blogs( compact( 'blog_ids', 'exclude_blog_ids', 'transient_expires_in' ) );
+			//Get blogs
+			$blog_conditions = (array) $blog_conditions;
+			if ( ! empty( $blog_ids ) ) {
+				$blog_conditions['blog_ids'] = $blog_ids;
+			}
+			if ( ! empty( $exclude_blog_ids ) ) {
+				$blog_conditions['exclude_blog_ids'] = $exclude_blog_ids;
+			}
+			$blogs = self::get_blogs( $blog_conditions );
 
 			//Prepare common where clause.
 			if ( is_string( $post_type ) ) {
@@ -203,6 +211,11 @@ class wponw
 	 * @param  mixed[optional]  $args
 	 *    blog_ids    Specifies the blog ID to get. Default is null.
 	 *    exclude_blog_ids    Specifies the blog ID to exclude. Default is null.
+	 *    public   Default is 1.
+	 *    archived    Default is 0.
+	 *    mature    Default is 0.
+	 *    spam    Default is 0.
+	 *    deleted    Default is 0.
 	 *    transient_expires_in    Specify when using the Transient API. specify the value, in seconds. Default is false, means not use Transient API.
 	 * @return  array<stdClass>
 	 */
@@ -213,6 +226,11 @@ class wponw
 		$args = wp_parse_args( $args, array(
 			'blog_ids' => null,
 			'exclude_blog_ids' => null,
+			'public' => 1,
+			'archived' => 0,
+			'mature' => 0,
+			'spam' => 0,
+			'deleted' => 0,
 			'transient_expires_in' => false,
 		) );
 
@@ -225,15 +243,23 @@ class wponw
 
 		extract( $args );
 
-		if ( empty( $blogs ) ) {
-			//If necessary, prepare the where clause
+		if ( empty( $blogs ) )
+		{
 			$where = array();
-			if ( $blog_ids ) {
+			if ( ! is_null( $public ) )
+				$where[] = sprintf( 'public = %d', $public );
+			if ( ! is_null( $archived ) )
+				$where[] = sprintf( 'archived = \'%s\'', (int) $archived );
+			if ( ! is_null( $mature ) )
+				$where[] = sprintf( 'mature = %d', $mature );
+			if ( ! is_null( $spam ) )
+				$where[] = sprintf( 'spam = %d', $spam );
+			if ( ! is_null( $deleted ) )
+				$where[] = sprintf( 'deleted = %d', $deleted );
+			if ( $blog_ids )
 				$where[] = sprintf( 'blog_id IN (%s)', self::cleanids( $blog_ids ) );
-			}
-			if ( $exclude_blog_ids ) {
+			if ( $exclude_blog_ids )
 				$where[] = sprintf( 'blog_id NOT IN (%s)', self::cleanids( $exclude_blog_ids ) );
-			}
 
 			//Build query
 			$query[] = sprintf( 'SELECT * FROM %sblogs', $wpdb->prefix );
@@ -413,14 +439,8 @@ class wponw
 	}
 
 
-	static public function cleanids($ids) {
-		if ( is_array( $ids ) ) {
-			$ids = array_map( 'intval', $ids );
-		} else {
-			$ids = preg_split( '/[^\d]+/', strval( $ids ), -1, PREG_SPLIT_NO_EMPTY );
-		}
-		$ids = implode(',', $ids);
-		return $ids;
+	static public function cleanids( $ids ) {
+		return implode( ',', wp_parse_id_list( $ids ) );
 	}
 
 }
