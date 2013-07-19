@@ -116,10 +116,10 @@ class WPONW_RecentPostsWidget extends WP_Widget
 		$post_type = isset( $instance['post_type'] ) ? $instance['post_type'] : 'post';
 		$post_type_id = $this->get_field_id( 'post_type' );
 		$post_type_name = $this->get_field_name( 'post_type' );
-		$blog_ids = isset( $instance['blog_ids'] ) ? $instance['blog_ids'] : null;
+		$blog_ids = ! empty( $instance['blog_ids'] ) ? $instance['blog_ids'] : null;
 		$blog_ids_id = $this->get_field_id( 'blog_ids' );
 		$blog_ids_name = $this->get_field_name( 'blog_ids' );
-		$exclude_blog_ids = isset( $instance['exclude_blog_ids'] ) ? $instance['exclude_blog_ids'] : null;
+		$exclude_blog_ids = ! empty( $instance['exclude_blog_ids'] ) ? $instance['exclude_blog_ids'] : null;
 		$exclude_blog_ids_id = $this->get_field_id( 'exclude_blog_ids' );
 		$exclude_blog_ids_name = $this->get_field_name( 'exclude_blog_ids' );
 

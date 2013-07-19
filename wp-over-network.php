@@ -203,7 +203,7 @@ class wponw
 			}
 
 			//Execute query
-			$query = implode( ' ', $query );
+echo			$query = implode( ' ', $query );
 			$posts = $wpdb->get_results( $query );
 			
 			$found_posts = $wpdb->get_results( 'SELECT FOUND_ROWS() as count' );
@@ -263,6 +263,8 @@ class wponw
 			'transient_expires_in' => false,
 		) );
 
+debug($args);
+
 		//Use the cached posts, If available.
 		if ( $args['transient_expires_in'] ) {
 			$transient_key = self::_transient_key( 'get_blogs_' . serialize( $args ) );
@@ -295,7 +297,7 @@ class wponw
 				$query[] = "WHERE " . implode(' AND ', $where);
 			}
 			$query[] = 'ORDER BY blog_id';
-			$query = implode( ' ', $query );
+echo			$query = implode( ' ', $query );
 
 			//Execute query
 			$blogs = $wpdb->get_results( $query );
