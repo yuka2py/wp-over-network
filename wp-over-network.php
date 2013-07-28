@@ -5,7 +5,7 @@ Plugin URI: https://github.com/yuka2py/wp_over_network
 Description: Utilities for network site on WordPress
 Author: HissyNC, yuka2py
 Author URI: https://github.com/yuka2py/wp_over_network
-Version: 0.4.3
+Version: 0.4.4
 */
 
 add_action( 'plugins_loaded', array( 'wponw', 'setup' ) );
@@ -41,7 +41,6 @@ class wponw
 
 
 
-
 	/**
 	 * Plugin initialization. Called on init action.
 	 * @return void
@@ -61,6 +60,8 @@ class wponw
 		add_shortcode('wponw_post_list', array( 'wponw', 'render_post_archive_to_string' ) );
 		add_shortcode('wponw_reset_query', 'wp_reset_query' );
 	}
+
+
 
 
 	/**
@@ -166,12 +167,12 @@ class wponw
 			//Prepare subqueries for get posts from network blogs.
 			$sub_queries = array();
 			foreach ( $blogs as $blog ) {
-				$blog_prefix = ( $blog->blog_id == 1 ) ? '' : $blog->blog_id . '_';
-				$sub_queries[] = sprintf( 'SELECT %3$d as blog_id, %1$s%2$sposts.* FROM %1$s%2$sposts %4$s', 
-					$wpdb->prefix,
-					$blog_prefix,
+				switch_to_blog( $blog->blog_id );
+				$sub_queries[] = sprintf( 'SELECT %1$d as blog_id, %2$s.* FROM %2$s %3$s', 
 					$blog->blog_id,
+					$wpdb->posts,
 					$WHERE );
+				restore_current_blog();
 			}
 
 			//BUILD QUERY
@@ -203,7 +204,7 @@ class wponw
 			}
 
 			//Execute query
-echo			$query = implode( ' ', $query );
+			$query = implode( ' ', $query );
 			$posts = $wpdb->get_results( $query );
 			
 			$found_posts = $wpdb->get_results( 'SELECT FOUND_ROWS() as count' );
@@ -263,8 +264,6 @@ echo			$query = implode( ' ', $query );
 			'transient_expires_in' => false,
 		) );
 
-debug($args);
-
 		//Use the cached posts, If available.
 		if ( $args['transient_expires_in'] ) {
 			$transient_key = self::_transient_key( 'get_blogs_' . serialize( $args ) );
@@ -292,12 +291,12 @@ debug($args);
 				$where[] = sprintf( 'blog_id NOT IN (%s)', self::cleanids( $exclude_blog_ids ) );
 
 			//Build query
-			$query[] = sprintf( 'SELECT * FROM %sblogs', $wpdb->prefix );
+			$query[] = sprintf( 'SELECT * FROM %s', $wpdb->blogs );
 			if ( $where ) {
 				$query[] = "WHERE " . implode(' AND ', $where);
 			}
 			$query[] = 'ORDER BY blog_id';
-echo			$query = implode( ' ', $query );
+			$query = implode( ' ', $query );
 
 			//Execute query
 			$blogs = $wpdb->get_results( $query );

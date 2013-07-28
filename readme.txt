@@ -4,7 +4,7 @@ Donate link: None currently.
 Tags: posts, blogs, network, multisite
 Requires at least: 3.5
 Tested up to: 3.5.1
-Stable tag: 0.4.3
+Stable tag: 0.4.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -128,6 +128,9 @@ None currently.
 
 
 == Changelog ==
+
+= 0.4.4 =
+* Fixed a bugs on the child site.
 
 = 0.4.3 =
 * Added the shortcode of `wponw_reset_query` and `wponw_post_list`.
