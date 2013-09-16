@@ -1,6 +1,9 @@
-<?php if ( $posts ) : ?>
-<?php echo $before_widget; ?>
-<?php if ( $widget_title ) echo implode( '', array( $before_title, $widget_title, $after_title ) ); ?>
-<?php require dirname(__FILE__) . '/archive-simple.php' ?>
-<?php echo $after_widget; ?>
-<?php endif ?>
+<?php
+if ( $posts ) {
+	echo $before_widget;
+	if ( $widget_title ) {
+		echo implode( '', array( $before_title, $widget_title, $after_title ) );
+	}
+	require dirname(__FILE__) . '/archive-simple.php';
+	echo $after_widget;
+}

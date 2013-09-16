@@ -1,58 +1,73 @@
 <?php
 
 
+require_once 'WPONW_BaseWidget.php';
+
+
 /**
  * based on default recent posts widget
  * 
  * Author: @HissyNC, @yuka2py
  */
-class WPONW_RecentPostsWidget extends WP_Widget
+class WPONW_RecentPostsWidget extends WPONW_BaseWidget
 {
-	const IDENTIFIER = 'wponw-reset-post-widget';
-
-
+	protected $identifier = 'wponw-reset-post-widget';
+	protected $form_template = 'widget-form';
 
 	function __construct() {
 		$widget_ops = array(
 			'classname' => 'WPONW_RecentPostsWidget', 
 			'description' => __( "The most recent posts on your network", wponw::WPONW_PREFIX ),
 		);
-		parent::__construct( self::IDENTIFIER, __( 'Recent Posts over Network', wponw::WPONW_PREFIX ), $widget_ops );
+		parent::__construct( $this->identifier, __( 'Recent Posts over Network', wponw::WPONW_PREFIX ), $widget_ops );
 		// $this->alt_option_name = 'WPONW_RecentPostsWidget';
 
-		add_action( 'save_post', array( $this, 'flush_widget_cache' ) );
-		add_action( 'deleted_post', array( $this, 'flush_widget_cache' ) );
-		add_action( 'switch_theme', array( $this, 'flush_widget_cache' ) );
+		// add_action( 'save_post', array( $this, 'flush_widget_cache' ) );
+		// add_action( 'deleted_post', array( $this, 'flush_widget_cache' ) );
+		// add_action( 'switch_theme', array( $this, 'flush_widget_cache' ) );
+
+		$this->add_setting_field( 'widget_title', __( 'Recent Posts over Network', wponw::WPONW_PREFIX ), 'strip_tags' );
+		$this->add_setting_field( 'numberposts', 5,  array( $this, 'sanitize_numberposts') );
+		$this->add_setting_field( 'show_date', false, 'boolval'  );
+		$this->add_setting_field( 'show_post_thumbnail', false, 'boolval'  );
+		$this->add_setting_field( 'transient_expires_in', 0, 'absint'  );
+		$this->add_setting_field( 'post_type', 'post', array( 'wponw', 'cleanslugs' )  );
+		$this->add_setting_field( 'blog_ids', '', array( 'wponw', 'cleanids' ) );
+		$this->add_setting_field( 'exclude_blog_ids', '', array( 'wponw', 'cleanids' ) );
+	}
+
+
+	function sanitize_numberposts( $value ) {
+		return max( 1, absint( $value ) );
 	}
 
 
 	function widget( $args, $instance ) {
-
 		//Using cache.
-		$cache = wp_cache_get( self::IDENTIFIER, 'widget' );
-		if ( ! is_array($cache) ) {
-			$cache = array();
-		}
-		if ( ! isset( $args['widget_id'] ) ) {
-			$args['widget_id'] = $this->id;
-		}
-		if ( isset( $cache[ $args['widget_id'] ] ) ) {
-			echo $cache[ $args['widget_id'] ];
-			return;
-		}
+		// $cache = wp_cache_get( $this->identifier, 'widget' );
+		// if ( ! is_array($cache) ) {
+		// 	$cache = array();
+		// }
+		// if ( ! isset( $args['widget_id'] ) ) {
+		// 	$args['widget_id'] = $this->id;
+		// }
+		// if ( isset( $cache[ $args['widget_id'] ] ) ) {
+		// 	echo $cache[ $args['widget_id'] ];
+		// 	return;
+		// }
+
+		//Set default.
+		$this->set_default_setting( $instance );
 
 		//Get widget config.
-		$widget_title = empty( $instance['widget_title'] ) ? __( 'Recent Posts over Network', wponw::WPONW_PREFIX ) : $instance['widget_title'];
-		$widget_title = apply_filters( 'widget_title', $widget_title, $instance, $this->id_base );
-		$numberposts = empty( $instance['numberposts'] ) ? 10 : absint( $instance['numberposts'] );
-		if ( empty( $numberposts ) ) {
-			$numberposts = 10;
-		}
+		$widget_title = apply_filters( 'widget_title', $instance['widget_title'], $instance, $this->id_base );
+		$numberposts = ( 0 < $instance['numberposts'] ) ? $instance['numberposts'] : 5;
 		$show_date = isset( $instance['show_date'] ) ? $instance['show_date'] : false;
 		$transient_expires_in = isset( $instance['transient_expires_in'] ) ? absint( $instance['transient_expires_in'] ) : 0;
 		$post_type = isset( $instance['post_type'] ) ? $instance['post_type'] : 'post';
 		$blog_ids = ! empty( $instance['blog_ids'] ) ? $instance['blog_ids'] : null;
 		$exclude_blog_ids = ! empty( $instance['exclude_blog_ids'] ) ? $instance['exclude_blog_ids'] : null;
+		$show_post_thumbnail = 
 
 		//Getting posts.
 		$getpostsargs = array( 
@@ -67,86 +82,20 @@ class WPONW_RecentPostsWidget extends WP_Widget
 		$posts = wponw::get_posts( $getpostsargs );
 
 		//Render widget
-		$rendered = wponw::render_to_string( 'widget', array_merge( $args, array(
-			'posts' => $posts,
-			'widget_title' => $widget_title,
-			'show_date' => $show_date,
+		$rendered = wponw::render_to_string( 'widget', array_merge( $args, compact(
+			'posts',
+			'widget_title',
+			'show_date',
+			'show_post_thumbnail'
 		) ) );
 
 		echo $rendered;
 
 		$cache[$args['widget_id']] = $rendered;
-		wp_cache_set( self::IDENTIFIER, $cache, 'widget' );
+		// wp_cache_set( $this->identifier, $cache, 'widget' );
 	}
 
 
-	function update( $new_instance, $old_instance ) {
-		$instance = $old_instance;
-		$instance['widget_title'] = strip_tags($new_instance['widget_title']);
-		$instance['numberposts'] = absint( $new_instance['numberposts'] );
-		$instance['show_date'] = (bool) $new_instance['show_date'];
-		$instance['transient_expires_in'] = absint( $new_instance['transient_expires_in'] );
-		$instance['post_type'] = trim( $new_instance['post_type'] );
-		$instance['blog_ids'] = wponw::cleanids( $new_instance['blog_ids'] );
-		$instance['exclude_blog_ids'] = wponw::cleanids( $new_instance['exclude_blog_ids'] );
-		$this->flush_widget_cache();
-
-		return $instance;
-	}
-
-
-	function flush_widget_cache() {
-		wp_cache_delete( self::IDENTIFIER, 'widget' );
-	}
-
-
-	function form( $instance ) {
-		$widget_title = isset( $instance['widget_title'] ) ? esc_attr( $instance['widget_title'] ) : '';
-		$widget_title_id = $this->get_field_id( 'widget_title' );
-		$widget_title_name = $this->get_field_name( 'widget_title' );
-		$numberposts = isset( $instance['numberposts'] ) ? absint( $instance['numberposts'] ) : 5;
-		$numberposts_id = $this->get_field_id( 'numberposts' );
-		$numberposts_name = $this->get_field_name( 'numberposts' );
-		$show_date = isset( $instance['show_date'] ) ? (bool) $instance['show_date'] : false;
-		$show_date_id = $this->get_field_id( 'show_date' );
-		$show_date_name = $this->get_field_name( 'show_date' );
-		$transient_expires_in = isset( $instance['transient_expires_in'] ) ? absint( $instance['transient_expires_in'] ) : 0;
-		$transient_expires_in_id = $this->get_field_id( 'transient_expires_in' );
-		$transient_expires_in_name = $this->get_field_name( 'transient_expires_in' );
-		$post_type = isset( $instance['post_type'] ) ? $instance['post_type'] : 'post';
-		$post_type_id = $this->get_field_id( 'post_type' );
-		$post_type_name = $this->get_field_name( 'post_type' );
-		$blog_ids = ! empty( $instance['blog_ids'] ) ? $instance['blog_ids'] : null;
-		$blog_ids_id = $this->get_field_id( 'blog_ids' );
-		$blog_ids_name = $this->get_field_name( 'blog_ids' );
-		$exclude_blog_ids = ! empty( $instance['exclude_blog_ids'] ) ? $instance['exclude_blog_ids'] : null;
-		$exclude_blog_ids_id = $this->get_field_id( 'exclude_blog_ids' );
-		$exclude_blog_ids_name = $this->get_field_name( 'exclude_blog_ids' );
-
-		wponw::render( 'widget-form', compact(
-			'widget_title',
-			'widget_title_id',
-			'widget_title_name',
-			'numberposts',
-			'numberposts_id',
-			'numberposts_name',
-			'show_date',
-			'show_date_id',
-			'show_date_name',
-			'transient_expires_in',
-			'transient_expires_in_id',
-			'transient_expires_in_name',
-			'post_type',
-			'post_type_id',
-			'post_type_name',
-			'blog_ids',
-			'blog_ids_id',
-			'blog_ids_name',
-			'exclude_blog_ids',
-			'exclude_blog_ids_id',
-			'exclude_blog_ids_name'
-		) );
-	}
 
 
 }

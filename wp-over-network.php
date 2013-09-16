@@ -7,9 +7,10 @@ Author: HissyNC, yuka2py
 Author URI: https://github.com/yuka2py/wp_over_network
 Version: 0.4.4
 */
+require_once 'misc.php';
+require_once 'WPONW_Query_Post.php';
 
 add_action( 'plugins_loaded', array( 'wponw', 'setup' ) );
-
 
 class wponw
 {
@@ -41,6 +42,7 @@ class wponw
 
 
 
+
 	/**
 	 * Plugin initialization. Called on init action.
 	 * @return void
@@ -62,8 +64,6 @@ class wponw
 	}
 
 
-
-
 	/**
 	 * Register widget. Called on widgets_init action.
 	 * @return void
@@ -72,14 +72,6 @@ class wponw
 		require_once self::$_plugin_directory . 'WPONW_RecentPostsWidget.php';
 		register_widget( 'WPONW_RecentPostsWidget' );
 	}
-
-
-
-
-	####
-	#### MAIN FUNCTIONS
-	####
-
 
 
 
@@ -95,144 +87,14 @@ class wponw
 	 *    order    Order method. DESC or ASC. Default is DESC.
 	 *    blog_ids    IDs of the blog to get. Default is null.
 	 *    exclude_blog_ids    IDs of the blog that you want to exclude. Default is null.
-	 *    blog_conditions    get_blogs
+	 *    site_args    get_blogs
 	 *    affect_wp_query    Whether or not affect the $wp_query. Default is false, means NOT affect. Specify true for the plugins that depend on $wp_query.
 	 *    transient_expires_in  Specify seconds of the expiry for the cache. Default is 0, means Transient not use.
 	 * @return  array<stdClass>
 	 */
-	static public function get_posts( $args=null ) {
-
-		global $wpdb;
-
-		$args = wp_parse_args( $args, array( 
-			'numberposts' => 5,
-			'offset' => null,
-			'paged' => max( 1, get_query_var( 'paged' ) ),
-			'post_type' => 'post',
-			'post_status' => 'publish',
-			'orderby' => 'post_date',
-			'order' => 'DESC',
-			'affect_wp_query' => false,
-			'blog_ids' => null,
-			'exclude_blog_ids' => null,
-			'blog_conditions' => array(),
-			'transient_expires_in' => false,
-		) );
-
-		//Use the cached posts, If available.
-		if ( $args['transient_expires_in'] ) {
-			$transient_key = self::_transient_key( 'get_posts_' . serialize( $args ) );
-			list ( $posts, $found_posts, $numberposts ) = get_transient( $transient_key );
-
-			//Not use the cache if changed the $numberposts.
-			if ( $args['numberposts'] !== $numberposts ) {
-				$posts = false;
-				delete_transient( $transient_key );
-			}
-		}
-
-		extract( $args );
-
-		if ( empty( $posts ) or empty( $found_posts ) )
-		{
-			//Get blogs
-			$blog_conditions = (array) $blog_conditions;
-			if ( ! empty( $blog_ids ) ) {
-				$blog_conditions['blog_ids'] = $blog_ids;
-			}
-			if ( ! empty( $exclude_blog_ids ) ) {
-				$blog_conditions['exclude_blog_ids'] = $exclude_blog_ids;
-			}
-			$blogs = self::get_blogs( $blog_conditions );
-
-			//Prepare where course.
-			$where = array();
-			if ( ! is_null( $post_type ) ) {
-				$post_type = self::cleanslugs( $post_type );
-				$post_type = sprintf( 'post_type IN (%s)', $post_type );
-				$where[] = $post_type;
-			}
-			if ( ! is_null( $post_status ) ) {
-				$post_status = self::cleanslugs( $post_status );
-				$post_status = sprintf( 'post_status IN (%s)', $post_status );
-				$where[] = $post_status;
-			}
-
-			if ( $where ) {
-				$WHERE = 'WHERE ' . implode( ' AND ', $where );
-			} else {
-				$WHERE = '';
-			}
-
-			//Prepare subqueries for get posts from network blogs.
-			$sub_queries = array();
-			foreach ( $blogs as $blog ) {
-				switch_to_blog( $blog->blog_id );
-				$sub_queries[] = sprintf( 'SELECT %1$d as blog_id, %2$s.* FROM %2$s %3$s', 
-					$blog->blog_id,
-					$wpdb->posts,
-					$WHERE );
-				restore_current_blog();
-			}
-
-			//BUILD QUERY
-			$query[] = 'SELECT SQL_CALC_FOUND_ROWS *';
-			$query[] = sprintf( 'FROM (%s) as posts', implode( ' UNION ALL ', $sub_queries ) );
-
-			//ORDER BY
-			if ( ! is_null( $orderby ) ) {
-				$order = trim( $order );
-				$orderby = trim( $orderby );
-				$orderby  = sanitize_sql_orderby( "$orderby $order" )
-				and $query[] = "ORDER BY $orderby";
-			}
-
-			//LIMIT
-			$numberposts = intval( $numberposts );
-			$numberposts = max( 0, $numberposts );
-			if ( 0 < $numberposts ) {
-				if ( ! is_null( $paged ) and is_null( $offset ) ) {
-					$offset = ( intval( $paged ) - 1 ) * $numberposts;
-				}
-				$offset = intval( $offset );
-				$offset = max( 0, $offset );
-				if ( 0 < $offset ) {
-					$query[] = sprintf( 'LIMIT %d, %d', $offset, $numberposts );
-				} else {
-					$query[] = sprintf( 'LIMIT %d', $numberposts );
-				}
-			}
-
-			//Execute query
-			$query = implode( ' ', $query );
-			$posts = $wpdb->get_results( $query );
-			
-			$found_posts = $wpdb->get_results( 'SELECT FOUND_ROWS() as count' );
-			$found_posts = $found_posts[0]->count;
-
-			// Update the transient.
-			if ( $args['transient_expires_in'] ) {
-				set_transient( $transient_key,
-					array( $posts, $found_posts, $numberposts ), 
-					$args['transient_expires_in'] );
-			}
-		}
-
-		// Affects wp_query.
-		if ( $affect_wp_query ) {
-			if ( empty( $numberposts ) ) {
-				$numberposts = $found_posts;
-			}
-			global $wp_query;
-			$wp_query = new WP_Query( array( 'posts_per_page' => $numberposts ) );
-			$wp_query->found_posts = $found_posts;
-			$wp_query->max_num_pages = ceil( $found_posts / $numberposts );
-			$wp_query = apply_filters( 'wponw_affect_wp_query', $wp_query );
-		}
-
-		return $posts;
+	static public function get_posts( $args='' ) {
+		return new WPONW_Query_Post();
 	}
-
 
 
 	/**
@@ -249,73 +111,8 @@ class wponw
 	 *    transient_expires_in    Specify when using the Transient API. specify the value, in seconds. Default is false, means not use Transient API.
 	 * @return  array<stdClass>
 	 */
-	static public function get_blogs( $args=null ) {
-
-		global $wpdb;
-
-		$args = wp_parse_args( $args, array(
-			'blog_ids' => null,
-			'exclude_blog_ids' => null,
-			'public' => 1,
-			'archived' => 0,
-			'mature' => 0,
-			'spam' => 0,
-			'deleted' => 0,
-			'transient_expires_in' => false,
-		) );
-
-		//Use the cached posts, If available.
-		if ( $args['transient_expires_in'] ) {
-			$transient_key = self::_transient_key( 'get_blogs_' . serialize( $args ) );
-			$blogs = get_transient( $transient_key );
-		}
-
-		extract( $args );
-
-		if ( empty( $blogs ) )
-		{
-			$where = array();
-			if ( ! is_null( $public ) )
-				$where[] = sprintf( 'public = %d', $public );
-			if ( ! is_null( $archived ) )
-				$where[] = sprintf( 'archived = \'%s\'', (int) $archived );
-			if ( ! is_null( $mature ) )
-				$where[] = sprintf( 'mature = %d', $mature );
-			if ( ! is_null( $spam ) )
-				$where[] = sprintf( 'spam = %d', $spam );
-			if ( ! is_null( $deleted ) )
-				$where[] = sprintf( 'deleted = %d', $deleted );
-			if ( $blog_ids )
-				$where[] = sprintf( 'blog_id IN (%s)', self::cleanids( $blog_ids ) );
-			if ( $exclude_blog_ids )
-				$where[] = sprintf( 'blog_id NOT IN (%s)', self::cleanids( $exclude_blog_ids ) );
-
-			//Build query
-			$query[] = sprintf( 'SELECT * FROM %s', $wpdb->blogs );
-			if ( $where ) {
-				$query[] = "WHERE " . implode(' AND ', $where);
-			}
-			$query[] = 'ORDER BY blog_id';
-			$query = implode( ' ', $query );
-
-			//Execute query
-			$blogs = $wpdb->get_results( $query );
-
-			//Add additional blog info.
-			foreach ( $blogs as &$blog ) {
-				switch_to_blog( $blog->blog_id );
-				$blog->name = get_bloginfo('name');
-				$blog->home_url = get_home_url();
-				restore_current_blog();
-			}
-
-			//Update the transient.
-			if ( $args['transient_expires_in'] ) {
-				set_transient( $transient_key, $blogs, $args['transient_expires_in'] );
-			}
-		}
-
-		return $blogs;
+	static public function get_blogs( $args='' ) {
+		return new WPONW_Query_Site( $args );
 	}
 
 
@@ -439,12 +236,12 @@ class wponw
 	 * @param  mixed $key
 	 * @return string
 	 */
-	static private function _transient_key( $key ) {
+	function transient_key( $key ) {
 		if ( ! is_string( $key ) ) {
 			$key = sha1( serialize( $key ) );
 		}
-		$key = substr($key, 0, 45 - strlen( self::WPONW_PREFIX ) );
-		return self::WPONW_PREFIX . $key;
+		$key = substr($key, 0, 45 - strlen( wponw::WPONW_PREFIX ) );
+		return wponw::WPONW_PREFIX . $key;
 	}
 
 	/**
@@ -468,18 +265,19 @@ class wponw
 	}
 
 
-	static public function cleanids( $ids ) {
-		return implode( ',', wp_parse_id_list( $ids ) );
-	}
-	static public function cleanslugs( $slugs ) {
-		if ( ! is_array( $slugs ) ) {
-			$slugs = trim( strval( $slugs ) );
-			$slugs = preg_split( '/[,\s]+/', $slugs, -1, PREG_SPLIT_NO_EMPTY);
+	static public function parse_cs_values( $values , $snitizer='intval', $quote=false) {
+		if ( ! is_array( $values ) ) {
+			$values = trim( strval( $values ) );
+			$values = preg_split( '/[,\s]+/', $values, -1, PREG_SPLIT_NO_EMPTY );
 		}
-		$slugs = array_map( 'sanitize_key' , $slugs );
-		$slugs = array_unique( $slugs );
-		$slugs = implode( "','", $slugs);
-		return "'$slugs'";
+		$values = array_map( $snitizer , $values );
+		$values = array_unique( $values );
+		if ( $quote ) {
+			$values = sprintf( "'%s'", implode( "','", $values ) );
+		} else {
+			$values = implode( ",", $values );
+		}
+		return $values;
 	}
 
 }
